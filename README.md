@@ -49,8 +49,13 @@ Requirements: Python 3.10+, Chromium via Playwright (installed above).
 ## Quick start (no code)
 
 ```bash
-bash scripts/superqa.sh              # opens the TUI
+superqa serve                        # web admin: click Run on any scenario
+bash scripts/superqa.sh              # or the terminal TUI
 ```
+
+The **web admin** (`superqa serve` -> http://127.0.0.1:8760) is the most clickable
+surface: every scenario - recorded or agent-authored - with a Run button, live
+progress, run history, and inline reports. It shares the TUI/CLI data.
 
 - `n` - record: a Chrome window opens with a SuperQA panel (bottom-right). Click
   through the site; every click/input becomes a step. Passwords are stored as
@@ -124,7 +129,9 @@ superqa_tui/
 ├── recorder_overlay.js      injected shadow-DOM panel: record / assert / save
 ├── scenario.py  store.py    YAML models; SQLite vars + run history
 ├── report.py    i18n.py     md/html reports, ko/en strings, secret masking
-├── scheduler.py             interval schedules (TUI-armed or daemon)
+├── visual.py    junit.py    screenshot baselines; JUnit XML for CI
+├── diff.py      scheduler.py run-to-run diff; interval schedules
+├── admin.py                 web admin server (stdlib http, click-to-run)
 ├── app.py                   Textual TUI
 └── cli.py                   headless CLI (CI-friendly exit codes)
 ```

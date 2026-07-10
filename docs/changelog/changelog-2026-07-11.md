@@ -1,5 +1,35 @@
 # Changelog 2026-07-11 - SuperQA v0.3.0
 
+## Web admin - click-to-run dashboard (superqa serve)
+
+A local browser dashboard synced with the TUI/CLI (same scenario folder + SQLite
+store), so a non-developer can point-and-click instead of driving a terminal. Lists
+every scenario grouped by site - recorded (`기록-*`) and agent-authored alike, since
+both live in `~/.superqa/scenarios` - each with a Run button; right pane shows live
+per-step progress, run history with pass/fail badges, and inline report viewing.
+
+- stdlib only (`http.server.ThreadingHTTPServer`), no Flask/new deps. Runs execute in
+  background threads, each with its own Store (sqlite is not thread-shared).
+- Report files (incl. Korean-named run dirs) served with URL-encode/decode; path
+  traversal blocked (report root containment check).
+- Interrupted runs (process died mid-run) no longer show as perpetually "running" -
+  relabeled "중단됨" after 5 min.
+- New `superqa serve [--port --open]` CLI command; `test_admin.py` covers the page,
+  scenario listing, an end-to-end run + report/screenshot serving, and traversal block.
+
+## Recorder panel robustness
+
+The record overlay now re-mounts itself (1.5s interval) if the target site re-renders
+`document.body` - fixes SPAs where the save/assert buttons could disappear, leaving
+only the status line. Closing the browser window still saves either way.
+
+## Skill description tightened
+
+Shortened and de-Korean-ized the SKILL.md description (routing metadata) to what+use-when
+per write-a-skill guidance.
+
+# Changelog 2026-07-11 - SuperQA v0.3.0 (earlier same day)
+
 ## Visual regression (screenshot baseline diff)
 
 `superqa baseline <scenario|--all>` accepts the latest run's step screenshots as the

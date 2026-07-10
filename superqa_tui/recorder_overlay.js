@@ -200,4 +200,8 @@
   } else {
     mountPanel();
   }
+  // Some SPAs re-render document.body and can drop the panel; re-mount it.
+  setInterval(() => {
+    if (document.body && !document.getElementById("superqa-host")) mountPanel();
+  }, 1500);
 })();

@@ -274,6 +274,12 @@ def cmd_doctor(_args) -> int:
     return 0 if ok_all else 1
 
 
+def cmd_serve(args) -> int:
+    from .admin import serve
+    serve(host=args.host, port=args.port, open_browser=args.open)
+    return 0
+
+
 def cmd_list(_args) -> int:
     scs = list_scenarios()
     if not scs:
@@ -305,6 +311,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     doc = sub.add_parser("doctor", help="환경 진단")
     doc.set_defaults(func=cmd_doctor)
+
+    srv = sub.add_parser("serve", help="웹 admin (클릭으로 시나리오 실행, TUI와 동기화)")
+    srv.add_argument("--host", default="127.0.0.1")
+    srv.add_argument("--port", type=int, default=8760)
+    srv.add_argument("--open", action="store_true", help="브라우저 자동 열기")
+    srv.set_defaults(func=cmd_serve)
 
     a = sub.add_parser("auto", help="URL 하나로 자동 스모크 QA")
     a.add_argument("url")

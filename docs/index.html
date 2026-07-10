@@ -187,6 +187,9 @@ footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-s
       <div class="card"><h3>화면 변화 감지 + 실패 리플레이</h3>
         <p>기준선을 채택하면 매 실행 스크린샷을 픽셀 비교해 레이아웃 변화가 빨간
         diff 이미지로 표시. 실패한 실행은 trace.zip으로 그 순간을 되돌려봅니다.</p></div>
+      <div class="card"><h3>클릭으로 실행하는 웹 admin</h3>
+        <p><code>superqa serve</code>로 브라우저 대시보드를 엽니다. 녹화·에이전트
+        생성 시나리오를 실행 버튼 하나로 돌리고, 진행·이력·리포트를 한 화면에서 봅니다.</p></div>
       <div class="card"><h3>사이트 정보는 로컬에만</h3>
         <p>시나리오·계정·사이트 규칙은 전부 <code>~/.superqa/</code>에 저장.
         저장소에는 어떤 사이트 정보도 커밋되지 않습니다.</p></div>
@@ -238,7 +241,8 @@ pip3 install textual playwright pyyaml
 python3 -m playwright install chromium
 
 <span class="c"># 3. 실행</span>
-bash ~/.claude/skills/superqa/scripts/superqa.sh     <span class="c"># TUI</span>
+python3 -m superqa_tui serve                         <span class="c"># 웹 admin (클릭 실행)</span>
+bash ~/.claude/skills/superqa/scripts/superqa.sh     <span class="c"># 또는 터미널 TUI</span>
 <span class="c"># 또는: pip3 install -e ~/.claude/skills/superqa  ->  superqa 명령 사용</span>
     </div>
   </section>

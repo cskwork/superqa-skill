@@ -47,8 +47,13 @@ pip3 install textual playwright pyyaml && python3 -m playwright install chromium
 ## 빠른 시작 (코드 없이)
 
 ```bash
-bash scripts/superqa.sh              # TUI 실행
+superqa serve                        # 웹 admin: 시나리오마다 실행 버튼 클릭
+bash scripts/superqa.sh              # 또는 터미널 TUI
 ```
+
+**웹 admin**(`superqa serve` -> http://127.0.0.1:8760)이 가장 클릭하기 쉬운 화면입니다.
+녹화·에이전트 생성 시나리오 전부를 실행 버튼과 함께 보여주고, 실시간 진행·실행 이력·
+리포트 열람까지 됩니다. TUI/CLI와 같은 데이터를 공유합니다.
 
 - `n` - 기록: 크롬 창이 열리고 우측 하단에 SuperQA 패널이 뜹니다. 평소처럼
   클릭하면 각 클릭/입력이 단계가 됩니다. 비밀번호는 평문이 아닌 `{{password}}`로

@@ -1,6 +1,24 @@
-# TUI + recorder + scheduler (the non-developer lane)
+# TUI + web admin + recorder + scheduler (the non-developer lane)
 
-## Launch
+## Web admin (most clickable, for anyone)
+
+```bash
+superqa serve            # http://127.0.0.1:8760
+superqa serve --port 9000 --open
+```
+
+A browser dashboard, synced with the TUI/CLI (same scenario folder + SQLite store):
+
+- Left: every scenario grouped by site - recorded (`기록-*`) and agent-authored alike -
+  each with a Run button. Toggle headless on/off at the top.
+- Right: live run progress (per-step dots), run history with pass/fail badges, and
+  inline report viewing (click 리포트).
+- Broken scenario files show a warning banner instead of vanishing.
+
+Use this when a non-developer wants to point-and-click; use the terminal TUI below when
+you prefer keyboard-driven work in a shell.
+
+## Launch (terminal TUI)
 
 ```bash
 bash scripts/superqa.sh          # from the skill root
@@ -57,6 +75,7 @@ superqa report open                            # latest report
 superqa report list                            # run history (+ reports/index.html)
 superqa baseline 로그인-정상                    # accept screenshots as visual baseline
 superqa run --all --site myshop --headless --junit results.xml   # CI output
+superqa serve                                  # web admin (click to run)
 superqa doctor                                 # environment check, plain-language fixes
 ```
 

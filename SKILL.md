@@ -1,6 +1,6 @@
 ---
 name: superqa
-description: Browser QA for any dev/staging/prod website. Generates test scenarios from a simple prompt, drives the site with a real browser, detects side effects (console errors, JS exceptions, failed requests, unexpected dialogs/popups/tabs), and writes reports non-developers can read in their own language. Ships a Textual TUI with browser click recording, a SQLite account/variable store, scheduling, and a headless CLI for regression after a feature is finished. Use when the user says QA, 테스트, browser test, verify this site/URL, regression check, record a scenario, schedule QA, or gives a URL to test.
+description: Browser QA for any website: turns a plain prompt into test scenarios, drives a real browser, and flags side effects (console/JS errors, failed requests, unexpected dialogs/popups/tabs) in plain-language reports. Also click-to-record, visual baselines, a clickable web admin, and CI/JUnit output. Use when the user says QA, browser test, regression check, record/schedule a scenario, or gives a URL to verify.
 ---
 
 # SuperQA - browser QA on anything, for anyone
@@ -56,10 +56,14 @@ user's language. Never claim a check passed without a run directory + report to 
 
 ## Non-dev lane (what you tell users)
 
-- `bash scripts/superqa.sh` opens the TUI: `n` record by clicking in a real browser,
+- **Web admin (most clickable): `superqa serve`** opens a browser dashboard listing every
+  scenario - recorded and agent-authored alike - with a Run button each, live progress,
+  run history, and inline reports. Same data as the TUI/CLI.
+- Terminal TUI: `bash scripts/superqa.sh` - `n` record by clicking in a real browser,
   `r` run, `a` run all, `u` auto QA, `s` schedule, `v` accounts/vars, `o` open report.
 - While recording, a SuperQA panel floats in the browser (pause / add-assertion /
-  save-and-finish). Typed passwords are stored as `{{password}}`, never as plain text.
+  save-and-finish; it re-mounts itself if the site re-renders). Typed passwords are
+  stored as `{{password}}`, never as plain text.
 
 ## Reference map
 
