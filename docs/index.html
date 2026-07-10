@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperQA - 누구나 쓰는 브라우저 QA</title>
+<meta name="description" content="어떤 웹사이트든 클릭으로 기록하고, 한 줄로 실행하고, 사람의 언어로 리포트를 받는 브라우저 QA. Claude Code 스킬 + Textual TUI.">
+<style>
+:root{
+  --bg:#0b1220; --bg2:#111a2c; --panel:#16213a; --line:#243250;
+  --text:#e6edf7; --muted:#9fb0c7; --accent:#34d399; --accent-dark:#065f46;
+  --fail:#f87171; --radius:14px;
+  --mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',
+    'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.65;
+}
+.wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* header */
+header{border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,18,32,.92);
+  backdrop-filter:blur(8px);z-index:10}
+.nav{display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{font-weight:800;font-size:18px;letter-spacing:-.02em;color:var(--text)}
+.logo span{color:var(--accent)}
+.nav-links{display:flex;gap:22px;font-size:14px}
+.nav-links a{color:var(--muted);white-space:nowrap}
+.nav-links a:hover{color:var(--text);text-decoration:none}
+@media(max-width:720px){.nav-links a:not(:last-child){display:none}}
+
+/* hero */
+.hero{padding:88px 0 56px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+@media(max-width:880px){.hero{grid-template-columns:1fr;padding:56px 0 32px}}
+.hero h1{font-size:clamp(30px,4.6vw,46px);line-height:1.22;letter-spacing:-.03em;font-weight:800}
+.hero h1 em{color:var(--accent);font-style:normal}
+.hero p.lead{margin:18px 0 30px;color:var(--muted);font-size:17px;max-width:34em}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:12px 22px;border-radius:10px;font-weight:700;font-size:15px}
+.btn-primary{background:var(--accent);color:#04241a}
+.btn-primary:hover{background:#4ade80;text-decoration:none}
+.btn-ghost{border:1px solid var(--line);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);text-decoration:none}
+.hero-note{margin-top:14px;font-size:13px;color:var(--muted)}
+
+/* terminal mock */
+.term{background:#0a0f1a;border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;font-family:var(--mono);font-size:12.5px}
+.term-bar{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.dot{width:10px;height:10px;border-radius:50%;background:#2c3a57}
+.dot:first-child{background:#f87171}.dot:nth-child(2){background:#fbbf24}.dot:nth-child(3){background:#34d399}
+.term pre{padding:16px 18px;overflow-x:auto;line-height:1.7;color:#c7d4e8}
+.t-cmd{color:#e6edf7;font-weight:700}
+.t-pass{color:var(--accent);font-weight:700}
+.t-warn{color:#fbbf24}
+.t-dim{color:#64748b}
+
+/* sections */
+section{padding:64px 0;border-top:1px solid var(--line)}
+h2{font-size:26px;letter-spacing:-.02em;margin-bottom:8px}
+.sub{color:var(--muted);margin-bottom:36px;max-width:44em}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.step b.no{display:inline-flex;width:28px;height:28px;border-radius:8px;background:var(--accent-dark);
+  color:var(--accent);align-items:center;justify-content:center;font-size:14px;margin-bottom:12px}
+.step h3{font-size:17px;margin-bottom:8px}
+.step p{color:var(--muted);font-size:14px}
+
+/* features */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.card h3{font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.card h3 svg{flex:none}
+.card p{color:var(--muted);font-size:13.5px}
+
+/* code blocks */
+.code{background:#0a0f1a;border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;font-family:var(--mono);font-size:13px;overflow-x:auto;line-height:1.8;color:#c7d4e8}
+.code .c{color:#64748b}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+@media(max-width:820px){.two-col{grid-template-columns:1fr}}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-size:13.5px}
+.foot{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo">Super<span>QA</span></div>
+    <nav class="nav-links">
+      <a href="#how">사용법</a>
+      <a href="#features">기능</a>
+      <a href="#agent">Claude Code 스킬</a>
+      <a href="#install">설치</a>
+      <a href="https://github.com/cskwork/superqa-skill">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <div>
+      <h1>어떤 사이트든,<br>누구나 하는 <em>브라우저 QA</em></h1>
+      <p class="lead">
+        클릭만 하면 테스트가 기록되고, 한 줄이면 전체 회귀가 돌아갑니다.
+        콘솔 오류·깨진 요청·예상 밖 팝업까지 자동으로 찾아내고,
+        리포트는 비개발자도 읽는 우리말 문장으로 나옵니다.
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#install">시작하기</a>
+        <a class="btn btn-ghost" href="https://github.com/cskwork/superqa-skill">GitHub 보기</a>
+      </div>
+      <p class="hero-note">Claude Code 스킬 + Textual TUI + CLI · Python 3.10+ · MIT</p>
+    </div>
+    <div class="term" role="img" aria-label="superqa 실행 결과 터미널 예시">
+      <div class="term-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <pre>$ <span class="t-cmd">superqa run --all --site myshop --headless</span>
+실행: 로그인-정상 (myshop)
+  [1] 사이트 접속 ... <span class="t-pass">성공</span>
+  [2] 아이디 입력 ... <span class="t-pass">성공</span>
+  [3] 로그인 버튼 클릭 ... <span class="t-pass">성공</span>
+  [4] 환영 문구 확인 ... <span class="t-pass">성공</span>
+      <span class="t-warn">!! http_error: 500 /api/recommend</span>
+결과: <span class="t-pass">성공</span> | 4단계 성공 · <span class="t-warn">부작용 1건 감지</span>
+리포트: ~/.superqa/reports/…/report.html
+<span class="t-dim">전체 결과: 3/3 성공 · exit 0</span></pre>
+    </div>
+  </div>
+
+  <section id="how">
+    <h2>세 단계면 끝</h2>
+    <p class="sub">코드도, 셀레늄 강의도 필요 없습니다. 브라우저를 평소처럼 쓰는 것이 곧 테스트 작성입니다.</p>
+    <div class="steps">
+      <div class="step"><b class="no">1</b>
+        <h3>클릭으로 기록</h3>
+        <p>실제 크롬 창에 SuperQA 패널이 뜹니다. 사이트를 평소처럼 클릭하면
+        각 동작이 "'로그인' 버튼 클릭" 같은 우리말 단계로 저장됩니다.
+        비밀번호는 평문 대신 <code>{{password}}</code>로 기록됩니다.</p>
+      </div>
+      <div class="step"><b class="no">2</b>
+        <h3>실행·스케줄</h3>
+        <p>TUI에서 키 하나로 실행하거나, <code>superqa run --all</code>로 전체 회귀를 돌립니다.
+        N분마다 자동 실행하는 스케줄과 CI용 headless 모드도 내장.</p>
+      </div>
+      <div class="step"><b class="no">3</b>
+        <h3>리포트 받기</h3>
+        <p>단계별 스크린샷, 성공/실패 배지, 부작용 표가 담긴 단일 HTML.
+        한국어·영어 내장, 누구에게든 그대로 전달하면 됩니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <h2>흐름이 통과해도, 문제는 드러난다</h2>
+    <p class="sub">SuperQA는 시나리오 단계만 보지 않습니다. 실행 내내 브라우저 전체(팝업 포함)를 감시합니다.</p>
+    <div class="grid">
+      <div class="card"><h3>부작용 자동 감지</h3>
+        <p>콘솔 오류, 미처리 JS 예외, 실패한 네트워크 요청, HTTP 4xx/5xx를
+        단계 번호와 함께 기록. 단언이 전부 통과해도 숨은 결함이 리포트에 남습니다.</p></div>
+      <div class="card"><h3>팝업·다이얼로그 완전 대응</h3>
+        <p>alert/confirm/prompt는 정책대로 자동 처리, 새 탭·팝업은 자동으로 따라가서
+        그 안에서 검증을 계속합니다. 이중 새 탭 체인도 문제없습니다.</p></div>
+      <div class="card"><h3>계정 저장소 + 마스킹</h3>
+        <p>아이디/비밀번호는 SQLite에 한 번만 저장하고 시나리오에선 <code>{{username}}</code>으로 참조.
+        비밀값은 모든 리포트와 오류 메시지에서 자동 마스킹됩니다.</p></div>
+      <div class="card"><h3>기능 완료 후 회귀 테스트</h3>
+        <p>개발자가 기능을 끝내면 저장된 케이스를 전부 재실행해 새 실패와 새 부작용만
+        골라 보여줍니다. exit code로 CI 게이트도 됩니다.</p></div>
+      <div class="card"><h3>원버튼 스모크 QA</h3>
+        <p>URL 하나만 주면 접속해서 링크를 훑고 오류를 수집하는 <code>superqa auto</code>.
+        설정 없이 "사이트 살아있나"를 확인합니다.</p></div>
+      <div class="card"><h3>사이트 정보는 로컬에만</h3>
+        <p>시나리오·계정·사이트 규칙은 전부 <code>~/.superqa/</code>에 저장.
+        저장소에는 어떤 사이트 정보도 커밋되지 않습니다.</p></div>
+    </div>
+  </section>
+
+  <section id="agent">
+    <h2>Claude Code 스킬로 쓰면</h2>
+    <p class="sub">"이 사이트 QA해줘" 한 줄이면 에이전트가 사이트를 탐색해 시나리오 케이스를 직접 설계하고, 실행하고, 결과를 분류해 보고합니다.</p>
+    <div class="two-col">
+      <div class="code">
+<span class="c"># 사용자</span>
+"https://myshop.example.com QA해줘"
+
+<span class="c"># 에이전트가 하는 일</span>
+1. playwright-cli로 사이트 탐색 (메뉴, 로그인, 팝업 매핑)
+2. 해피패스/검증/오류/엣지 시나리오 YAML 생성
+3. superqa run --all --headless 로 결정적 실행
+4. 부작용 분류: 버그 후보 / 알려진 동작 / 환경 노이즈
+5. 우리말 요약 + 리포트 경로 보고
+      </div>
+      <div class="code">
+<span class="c"># 시나리오는 사람이 읽는 YAML</span>
+name: 로그인-정상
+site: myshop
+language: ko
+policy: { dialogs: accept, popups: follow }
+steps:
+  - action: fill
+    selector: "#username"
+    value: "{{username}}"
+    description: 아이디 입력
+  - action: click
+    selector: { role: button, name: 로그인 }
+    description: 로그인 버튼 클릭
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>설치</h2>
+    <p class="sub">2분이면 첫 QA를 돌릴 수 있습니다.</p>
+    <div class="code">
+<span class="c"># 1. 받기 (Claude Code 스킬 위치에 그대로)</span>
+git clone https://github.com/cskwork/superqa-skill ~/.claude/skills/superqa
+
+<span class="c"># 2. 의존성</span>
+pip3 install textual playwright pyyaml
+python3 -m playwright install chromium
+
+<span class="c"># 3. 실행</span>
+bash ~/.claude/skills/superqa/scripts/superqa.sh     <span class="c"># TUI</span>
+<span class="c"># 또는: pip3 install -e ~/.claude/skills/superqa  ->  superqa 명령 사용</span>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>SuperQA · MIT License</div>
+    <div><a href="https://github.com/cskwork/superqa-skill">github.com/cskwork/superqa-skill</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
