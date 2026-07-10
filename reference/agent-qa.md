@@ -13,9 +13,7 @@ scenarios blind without exploring first.
 ## 0. Setup check
 
 ```bash
-command -v playwright-cli || npm install -g @playwright/cli
-python3 -c "import playwright, textual, yaml" || pip3 install playwright textual pyyaml
-python3 -m playwright install chromium   # once
+python3 -m superqa_tui doctor      # one command checks everything, prints fixes
 ```
 
 ## 1. Ground before driving
@@ -63,6 +61,8 @@ When a developer says a backend/frontend feature is done:
 
 1. `python3 -m superqa_tui list` - find the site's existing cases.
 2. Run them all (`run --all --site <site> --headless`). This is the baseline sweep.
+   If visual baselines exist (`superqa baseline`), layout changes surface as
+   `visual_change` effects with diff images; failing steps save `trace.zip`.
 3. If the feature added new behavior, explore only the changed screens (step 2) and add
    new scenario cases for them, then run again.
 4. Read the automatic diff each run prints ("지난 실행과 비교"): new failures and

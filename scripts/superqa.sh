@@ -8,10 +8,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SK_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PYTHON="${SUPERQA_PYTHON:-python3}"
 
-if ! "$PYTHON" -c "import textual, playwright, yaml" 2>/dev/null; then
-  echo "SuperQA: installing dependencies (textual, playwright, pyyaml)..."
-  "$PYTHON" -m pip install --quiet textual playwright pyyaml || {
-    echo "SuperQA: pip install failed - install manually: pip3 install textual playwright pyyaml" >&2
+if ! "$PYTHON" -c "import textual, playwright, yaml, PIL" 2>/dev/null; then
+  echo "SuperQA: installing dependencies (textual, playwright, pyyaml, pillow)..."
+  "$PYTHON" -m pip install --quiet textual playwright pyyaml pillow || {
+    echo "SuperQA: pip install failed - install manually: pip3 install textual playwright pyyaml pillow" >&2
     exit 1
   }
 fi

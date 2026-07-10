@@ -16,15 +16,18 @@ import asyncio
 import json
 import subprocess
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
 from .diff import compute_diff, format_diff_lines
 from .engine import Engine, RunResult
 from .i18n import t
+from .junit import write_junit
 from .report import write_index, write_reports
 from .scenario import broken_scenarios, find_scenario, list_scenarios
 from .scheduler import add_schedule, load_schedules, remove_schedule, run_loop
 from .store import Store
+from .visual import accept_baseline
 
 
 def _print_event(ev: dict) -> None:
@@ -69,13 +72,19 @@ def _finish(result: RunResult, store: Store, run_id: int) -> int:
     return 0 if result.status == "pass" else 1
 
 
-async def _run_one(name: str, headed: bool, store: Store) -> int:
+async def _run_one(name: str, headed: bool, store: Store) -> tuple[int, RunResult]:
     sc = find_scenario(name)
     print(f"실행: {sc.name} ({sc.site})")
     run_id = store.start_run(sc.name, sc.site)
     engine = Engine(store=store, headed=headed, on_event=_print_event)
     result = await engine.run_scenario(sc)
-    return _finish(result, store, run_id)
+    return _finish(result, store, run_id), result
+
+
+def _maybe_junit(args, results: list[RunResult]) -> None:
+    if getattr(args, "junit", None):
+        path = write_junit(results, Path(args.junit).expanduser())
+        print(f"JUnit XML: {path}")
 
 
 def cmd_run(args) -> int:
@@ -88,14 +97,17 @@ def cmd_run(args) -> int:
         if not scs:
             print("실행할 시나리오가 없습니다.")
             return 1
-        codes = [asyncio.run(_run_one(str(s.path), headed, store)) for s in scs]
-        bad = sum(1 for c in codes if c != 0)
-        print(f"\n전체 결과: {len(codes) - bad}/{len(codes)} 성공")
+        outcomes = [asyncio.run(_run_one(str(s.path), headed, store)) for s in scs]
+        bad = sum(1 for code, _ in outcomes if code != 0)
+        print(f"\n전체 결과: {len(outcomes) - bad}/{len(outcomes)} 성공")
+        _maybe_junit(args, [r for _, r in outcomes])
         return 0 if bad == 0 else 1
     if not args.scenario:
         print("시나리오 이름 또는 경로가 필요합니다. (superqa run <name> | --all)")
         return 2
-    return asyncio.run(_run_one(args.scenario, headed, store))
+    code, result = asyncio.run(_run_one(args.scenario, headed, store))
+    _maybe_junit(args, [result])
+    return code
 
 
 def cmd_auto(args) -> int:
@@ -149,7 +161,7 @@ def cmd_schedule(args) -> int:
         store = Store()
 
         async def runner(name: str) -> None:
-            await _run_one(name, headed=False, store=store)
+            await _run_one(name, headed=False, store=store)  # tuple result unused
 
         print("스케줄 데몬 시작 (Ctrl+C로 종료)")
         try:
@@ -189,6 +201,79 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_baseline(args) -> int:
+    """Accept the latest run's screenshots as the visual baseline."""
+    store = Store()
+    if args.all:
+        names = [s.name for s in list_scenarios()
+                 if not args.site or s.site == args.site]
+    elif args.scenario:
+        names = [find_scenario(args.scenario).name]
+    else:
+        print("사용법: superqa baseline <시나리오> 또는 superqa baseline --all --site <site>")
+        return 2
+    if not names:
+        print("대상 시나리오가 없습니다.")
+        return 1
+    code = 0
+    for name in names:
+        run = store.latest_run(name)
+        if not run:
+            print(f"  {name}: 실행 기록 없음 - 먼저 superqa run 을 실행하세요")
+            code = 1
+            continue
+        sc = find_scenario(name)
+        n = accept_baseline(sc.site, sc.name, Path(run["report_path"]).parent)
+        print(f"  {name}: 기준선 {n}장 저장 - 다음 실행부터 화면 변화를 감지합니다")
+    return code
+
+
+def cmd_doctor(_args) -> int:
+    """Environment check a non-developer can read."""
+    import importlib
+    import shutil as _shutil
+    ok_all = True
+
+    def check(label: str, ok: bool, fix: str = "", required: bool = True) -> None:
+        nonlocal ok_all
+        mark = "OK " if ok else ("문제" if required else "선택")
+        print(f"  [{mark}] {label}" + ("" if ok else f" -> {fix}"))
+        if required and not ok:
+            ok_all = False
+
+    check(f"Python {sys.version.split()[0]}", sys.version_info >= (3, 10),
+          "Python 3.10 이상을 설치하세요")
+    for mod, fix, req in (("textual", "pip3 install textual", True),
+                          ("playwright", "pip3 install playwright", True),
+                          ("yaml", "pip3 install pyyaml", True),
+                          ("PIL", "pip3 install pillow (시각 회귀용)", False)):
+        try:
+            importlib.import_module(mod)
+            check(f"모듈 {mod}", True)
+        except ImportError:
+            check(f"모듈 {mod}", False, fix, req)
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            import os as _os
+            check("Chromium 브라우저", _os.path.exists(p.chromium.executable_path),
+                  "python3 -m playwright install chromium")
+    except Exception as e:
+        check("Chromium 브라우저", False, f"python3 -m playwright install chromium ({e})")
+    check("playwright-cli (에이전트 탐색용)", _shutil.which("playwright-cli") is not None,
+          "npm install -g @playwright/cli", required=False)
+    try:
+        from .scenario import superqa_home
+        home = superqa_home()
+        (home / ".doctor-touch").write_text("ok")
+        (home / ".doctor-touch").unlink()
+        check(f"데이터 폴더 쓰기 ({home})", True)
+    except Exception as e:
+        check("데이터 폴더 쓰기", False, str(e))
+    print("\n진단 결과: " + ("모두 정상" if ok_all else "위 '문제' 항목을 해결하세요"))
+    return 0 if ok_all else 1
+
+
 def cmd_list(_args) -> int:
     scs = list_scenarios()
     if not scs:
@@ -209,7 +294,17 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--all", action="store_true", help="모든 시나리오 실행(회귀 테스트)")
     r.add_argument("--site", default="", help="사이트 필터")
     r.add_argument("--headless", action="store_true", help="브라우저 창 없이 실행")
+    r.add_argument("--junit", default=None, metavar="PATH", help="JUnit XML 저장(CI용)")
     r.set_defaults(func=cmd_run)
+
+    b = sub.add_parser("baseline", help="최근 실행 스크린샷을 화면 기준선으로 저장")
+    b.add_argument("scenario", nargs="?", help="시나리오 이름")
+    b.add_argument("--all", action="store_true")
+    b.add_argument("--site", default="")
+    b.set_defaults(func=cmd_baseline)
+
+    doc = sub.add_parser("doctor", help="환경 진단")
+    doc.set_defaults(func=cmd_doctor)
 
     a = sub.add_parser("auto", help="URL 하나로 자동 스모크 QA")
     a.add_argument("url")

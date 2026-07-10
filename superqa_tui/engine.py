@@ -22,8 +22,16 @@ from playwright.async_api import (
     async_playwright,
 )
 
-from .scenario import Policy, Scenario, Step, site_ignore_patterns, superqa_home
+from .scenario import (
+    Policy,
+    Scenario,
+    Step,
+    safe_name,
+    site_ignore_patterns,
+    superqa_home,
+)
 from .store import Store
+from .visual import run_visual_checks
 
 EventCb = Callable[[dict], None]
 
@@ -242,6 +250,7 @@ class Engine:
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(headless=not self.headed, slow_mo=self.slow_mo)
             context = await browser.new_context(viewport={"width": 1440, "height": 900})
+            await context.tracing.start(screenshots=True, snapshots=True)
             collector = EffectCollector(sc.policy, self.on_event, ignore)
             collector.attach_context(context)
             page = await context.new_page()
@@ -249,10 +258,33 @@ class Engine:
                 await self._run_steps(sc, page, context, collector, result, run_dir)
             finally:
                 result.effects = collector.effects
+                self._append_visual_effects(sc, result, run_dir)
                 result.finished_at = time.time()
                 result.status = self._final_status(sc.policy, result)
+                await self._save_trace(context, result, run_dir)
                 await browser.close()
         return result
+
+    def _append_visual_effects(self, sc: Scenario, result: RunResult, run_dir: Path) -> None:
+        try:
+            findings = run_visual_checks(sc, result.step_results, run_dir)
+        except Exception:
+            return  # visual layer must never break a run
+        for f in findings:
+            eff = SideEffect("visual_change", "warning", f["message"], f["step_index"])
+            result.effects.append(eff)
+            self._emit("effect", **eff.to_dict())
+
+    async def _save_trace(self, context: BrowserContext, result: RunResult,
+                          run_dir: Path) -> None:
+        """Keep the Playwright trace only when something failed - debugging evidence."""
+        try:
+            if result.failed:
+                await context.tracing.stop(path=str(run_dir / "trace.zip"))
+            else:
+                await context.tracing.stop()
+        except Exception:
+            pass
 
     async def _run_steps(self, sc: Scenario, page: Page, context: BrowserContext,
                          collector: EffectCollector, result: RunResult, run_dir: Path) -> None:
@@ -564,8 +596,7 @@ def _maybe_done(context: BrowserContext, done: asyncio.Event) -> None:
         done.set()
 
 
-def _safe(name: str) -> str:
-    return re.sub(r"[^\w\-가-힣]+", "-", name).strip("-")[:60] or "run"
+_safe = safe_name  # shared with visual baselines so paths always agree
 
 
 def _step_from_record(payload: dict) -> Step | None:

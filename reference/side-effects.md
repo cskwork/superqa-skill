@@ -27,6 +27,30 @@ Each effect stores the step index it happened during, so the report ties "500 on
   Ignored effects still appear in the report under "무시된 부작용" - nothing is
   deleted, only demoted. Never put a bug candidate in an ignore list.
 
+## Visual regression (screenshot baseline)
+
+Accept a known-good run's screenshots as the baseline, and every later run
+pixel-compares each step against it:
+
+```bash
+superqa run 로그인-정상 --headless      # a run you trust
+superqa baseline 로그인-정상            # accept its screenshots as baseline
+# from now on, changes above policy.visual_threshold (default 1.0%)
+# appear as visual_change effects with a red-overlay step-NN-diff.png
+```
+
+Practical rules:
+
+- Capture the baseline in the SAME mode you run in (headless baseline for
+  headless runs) - renderer differences otherwise inflate percentages.
+- Dynamic pages (animations, dates, dashboards) produce small persistent diffs;
+  raise `policy.visual_threshold` (e.g. 5.0) for those scenarios, or
+  re-baseline after intentional UI changes.
+- The diff image shows exactly WHERE it changed - attach it when reporting
+  layout regressions.
+- Trace on failure: any failing run also saves `trace.zip`
+  (`npx playwright show-trace trace.zip` replays the failure).
+
 ## Run-to-run comparison (automatic)
 
 Every run stores a summary; the next run of the same scenario prints and embeds a

@@ -23,6 +23,7 @@ _EFFECT_KEYS = {
     "popup": "effect_popup",
     "download": "effect_download",
     "navigation": "effect_navigation",
+    "visual_change": "effect_visual_change",
 }
 
 
@@ -70,6 +71,8 @@ def _render_md(r: RunResult, lang: str, secrets: list[str],
         f"- {t('effects_line', lang, count=len(r.visible_effects))}",
         "",
     ]
+    if r.run_dir and (r.run_dir / "trace.zip").exists():
+        lines.insert(-1, f"- {t('trace_line', lang)}")
     if diff_lines:
         lines += [f"## {t('diff_title', lang)}", ""]
         lines += [f"- {ln}" if not ln.startswith("  ") else ln for ln in diff_lines]
@@ -187,6 +190,8 @@ def _render_html(r: RunResult, lang: str, secrets: list[str],
         items = "".join(f"<li>{esc(ln)}</li>" for ln in diff_lines)
         diff_html = (f"<h2>{esc(t('diff_title', lang))}</h2>"
                      f"<ul class='diff'>{items}</ul>")
+    if r.run_dir and (r.run_dir / "trace.zip").exists():
+        diff_html = (f"<p class='meta'>{esc(t('trace_line', lang))}</p>") + diff_html
     started = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r.started_at))
     return f"""<!doctype html><html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

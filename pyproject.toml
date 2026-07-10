@@ -1,6 +1,6 @@
 [project]
 name = "superqa"
-version = "0.2.0"
+version = "0.3.0"
 description = "Browser QA for everyone: record by clicking, run, schedule, and get reports non-developers can read - in your language."
 readme = "README.md"
 license = { text = "MIT" }
@@ -10,6 +10,7 @@ dependencies = [
     "textual>=0.80",
     "playwright>=1.45",
     "pyyaml>=6.0",
+    "pillow>=10.0",
 ]
 
 [project.scripts]

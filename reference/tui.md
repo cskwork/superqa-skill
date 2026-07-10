@@ -55,6 +55,9 @@ superqa vars set myshop username myid
 superqa vars set myshop password s3cret        # auto-masked
 superqa report open                            # latest report
 superqa report list                            # run history (+ reports/index.html)
+superqa baseline 로그인-정상                    # accept screenshots as visual baseline
+superqa run --all --site myshop --headless --junit results.xml   # CI output
+superqa doctor                                 # environment check, plain-language fixes
 ```
 
 Every run automatically compares against the previous run of the same scenario

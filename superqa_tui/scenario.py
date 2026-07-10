@@ -22,6 +22,10 @@ VALID_ACTIONS = {
 DEFAULT_HOME = Path.home() / ".superqa"
 
 
+def safe_name(name: str) -> str:
+    return re.sub(r"[^\w\-가-힣]+", "-", name).strip("-")[:60] or "run"
+
+
 def superqa_home() -> Path:
     import os
     home = Path(os.environ.get("SUPERQA_HOME", DEFAULT_HOME))
@@ -85,6 +89,7 @@ class Policy:
     fail_on_console_error: bool = False
     fail_on_http_error: bool = False
     ignore_effects: list[str] = field(default_factory=list)  # substrings -> noise
+    visual_threshold: float = 1.0  # % pixels changed vs baseline before flagging
 
     def to_dict(self) -> dict:
         d = {
@@ -95,6 +100,8 @@ class Policy:
         }
         if self.ignore_effects:
             d["ignore_effects"] = list(self.ignore_effects)
+        if self.visual_threshold != 1.0:
+            d["visual_threshold"] = self.visual_threshold
         return d
 
     @staticmethod
@@ -106,6 +113,7 @@ class Policy:
             fail_on_console_error=bool(d.get("fail_on_console_error", False)),
             fail_on_http_error=bool(d.get("fail_on_http_error", False)),
             ignore_effects=[str(x) for x in (d.get("ignore_effects") or [])],
+            visual_threshold=float(d.get("visual_threshold", 1.0)),
         )
 
 

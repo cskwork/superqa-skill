@@ -144,6 +144,13 @@ class Store:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def latest_run(self, scenario: str) -> dict | None:
+        row = self._conn.execute(
+            "SELECT * FROM runs WHERE scenario=? AND report_path IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (scenario,),
+        ).fetchone()
+        return dict(row) if row else None
+
     def previous_run(self, scenario: str, before_id: int) -> dict | None:
         """Latest finished run of the same scenario before the given run id."""
         row = self._conn.execute(

@@ -29,6 +29,11 @@ Two ways to use it:
 - Every run auto-compares against the previous run of the same scenario: new failures
   and newly appeared side-effect types are flagged as regressions; identical runs get
   a clean "no regression" verdict.
+- Visual regression built in: accept a trusted run as baseline (`superqa baseline`),
+  and later runs pixel-diff every step screenshot, flagging layout changes with a
+  red-overlay diff image. Failing runs also save a Playwright `trace.zip` replay.
+- CI-ready: `--junit results.xml` renders runs as native test results in
+  Jenkins/GitHub Actions; `superqa doctor` checks the environment in plain language.
 
 ## Install
 
