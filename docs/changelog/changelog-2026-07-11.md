@@ -45,8 +45,9 @@ Exists because non-developers hit environment problems first, not scenario probl
   case), baseline accept -> identical run clean -> DOM change flagged with diff file,
   trace kept only on failure, JUnit well-formed with failure mapping, doctor green.
 - All prior suites re-run green (engine smoke, v0.2 features, TUI pilot).
-- Live: aidt 6-scenario headed sweep 6/6 green (user-visible browser), baselines
-  accepted for all 6, headless rerun surfaced expected dynamic-content visual diffs.
+- Live: internal test bed (details local-only) 6-scenario headed sweep 6/6 green
+  (user-visible browser), baselines accepted for all 6, headless rerun surfaced
+  expected dynamic-content visual diffs.
 
 ## Pillow dependency
 
