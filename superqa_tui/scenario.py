@@ -40,6 +40,7 @@ class Step:
     timeout_ms: int = 10000
     optional: bool = False        # optional step failure does not fail the scenario
     expect_popup: bool = False    # click is expected to open a new tab/popup
+    retry: int = 0                # extra attempts on failure (flaky UIs)
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {"action": self.action}
@@ -55,6 +56,8 @@ class Step:
             d["optional"] = True
         if self.expect_popup:
             d["expect_popup"] = True
+        if self.retry:
+            d["retry"] = self.retry
         return d
 
     @staticmethod
@@ -71,6 +74,7 @@ class Step:
             timeout_ms=int(d.get("timeout_ms", 10000)),
             optional=bool(d.get("optional", False)),
             expect_popup=bool(d.get("expect_popup", False)),
+            retry=max(0, int(d.get("retry", 0))),
         )
 
 
@@ -80,14 +84,18 @@ class Policy:
     popups: str = "follow"        # follow (switch to new tab) | ignore | fail
     fail_on_console_error: bool = False
     fail_on_http_error: bool = False
+    ignore_effects: list[str] = field(default_factory=list)  # substrings -> noise
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "dialogs": self.dialogs,
             "popups": self.popups,
             "fail_on_console_error": self.fail_on_console_error,
             "fail_on_http_error": self.fail_on_http_error,
         }
+        if self.ignore_effects:
+            d["ignore_effects"] = list(self.ignore_effects)
+        return d
 
     @staticmethod
     def from_dict(d: dict | None) -> "Policy":
@@ -97,7 +105,20 @@ class Policy:
             popups=str(d.get("popups", "follow")),
             fail_on_console_error=bool(d.get("fail_on_console_error", False)),
             fail_on_http_error=bool(d.get("fail_on_http_error", False)),
+            ignore_effects=[str(x) for x in (d.get("ignore_effects") or [])],
         )
+
+
+def site_ignore_patterns(site: str, home: Path | None = None) -> list[str]:
+    """Noise substrings from ~/.superqa/sites/<site>/ignore.yaml (a plain list)."""
+    p = (home or superqa_home()) / "sites" / site / "ignore.yaml"
+    if not p.exists():
+        return []
+    try:
+        data = yaml.safe_load(p.read_text(encoding="utf-8"))
+        return [str(x) for x in data] if isinstance(data, list) else []
+    except Exception:
+        return []
 
 
 @dataclass

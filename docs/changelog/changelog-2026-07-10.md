@@ -1,4 +1,27 @@
-# Changelog 2026-07-10 - SuperQA v0.1.0 initial build
+# Changelog 2026-07-10
+
+## v0.2.0 - regression diff, noise control, retry (same day, from live-usage pain)
+
+- **Run-to-run diff**: every run persists a summary (failed steps + digit-normalized
+  effect digests) in the runs table; the next run of the same scenario prints and
+  embeds "지난 실행과 비교" - new failures, resolved failures, new/gone effect types.
+  Rationale: the post-feature regression question is "what CHANGED", not raw counts.
+  Rejected: diffing full reports - too brittle; URLs carry tokens/timestamps, so
+  digests collapse digits instead.
+- **Effect dedupe + ignore rules**: identical effects collapse into one row with a
+  count; site-level `sites/<site>/ignore.yaml` + scenario `policy.ignore_effects`
+  demote known noise into a separate report section (never deleted). Live effect:
+  viewer run went from 27 raw effects to 4 meaningful + 5 noise rows.
+- **Step retry**: `retry: N` re-attempts flaky steps (viewer swallowed first click).
+- **Recorder var mapping**: recorded fill values equal to stored vars are saved as
+  `{{key}}` references - portable scenarios, no personal values in YAML.
+- **Visibility fixes**: broken scenario YAMLs now warn in list/run --all/TUI
+  (previously silently skipped); `superqa report list` + auto-refreshed
+  `reports/index.html` run history.
+- Verified: 5 new feature tests + existing suites green; live double-run on the
+  internal test bed showed first-run notice then "회귀 없음" verdict.
+
+## v0.1.0 initial build
 
 ## Decisions and reasoning
 

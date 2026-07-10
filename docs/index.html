@@ -173,8 +173,8 @@ footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-s
     <p class="sub">SuperQA는 시나리오 단계만 보지 않습니다. 실행 내내 브라우저 전체(팝업 포함)를 감시합니다.</p>
     <div class="grid">
       <div class="card"><h3>부작용 자동 감지</h3>
-        <p>콘솔 오류, 미처리 JS 예외, 실패한 네트워크 요청, HTTP 4xx/5xx를
-        단계 번호와 함께 기록. 단언이 전부 통과해도 숨은 결함이 리포트에 남습니다.</p></div>
+        <p>콘솔 오류, 미처리 JS 예외, 실패한 요청, HTTP 4xx/5xx를 단계 번호와 함께 기록.
+        중복은 횟수로 합치고 알려진 노이즈는 분리해, 진짜 결함만 눈에 띕니다.</p></div>
       <div class="card"><h3>팝업·다이얼로그 완전 대응</h3>
         <p>alert/confirm/prompt는 정책대로 자동 처리, 새 탭·팝업은 자동으로 따라가서
         그 안에서 검증을 계속합니다. 이중 새 탭 체인도 문제없습니다.</p></div>
@@ -182,8 +182,8 @@ footer{border-top:1px solid var(--line);padding:36px 0;color:var(--muted);font-s
         <p>아이디/비밀번호는 SQLite에 한 번만 저장하고 시나리오에선 <code>{{username}}</code>으로 참조.
         비밀값은 모든 리포트와 오류 메시지에서 자동 마스킹됩니다.</p></div>
       <div class="card"><h3>기능 완료 후 회귀 테스트</h3>
-        <p>개발자가 기능을 끝내면 저장된 케이스를 전부 재실행해 새 실패와 새 부작용만
-        골라 보여줍니다. exit code로 CI 게이트도 됩니다.</p></div>
+        <p>실행할 때마다 직전 실행과 자동 비교해 새 실패·새 부작용 유형만 짚어주고,
+        변화가 없으면 "회귀 없음" 판정. exit code로 CI 게이트도 됩니다.</p></div>
       <div class="card"><h3>원버튼 스모크 QA</h3>
         <p>URL 하나만 주면 접속해서 링크를 훑고 오류를 수집하는 <code>superqa auto</code>.
         설정 없이 "사이트 살아있나"를 확인합니다.</p></div>

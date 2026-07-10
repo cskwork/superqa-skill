@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS runs (
     passed INTEGER NOT NULL DEFAULT 0,
     failed INTEGER NOT NULL DEFAULT 0,
     effects INTEGER NOT NULL DEFAULT 0,
-    report_path TEXT
+    report_path TEXT,
+    summary TEXT
 );
 """
 
@@ -49,7 +50,13 @@ class Store:
         self._conn = sqlite3.connect(str(self.db_path))
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(runs)")}
+        if "summary" not in cols:
+            self._conn.execute("ALTER TABLE runs ADD COLUMN summary TEXT")
 
     def close(self) -> None:
         self._conn.close()
@@ -122,11 +129,12 @@ class Store:
         return int(cur.lastrowid or 0)
 
     def finish_run(self, run_id: int, status: str, passed: int, failed: int,
-                   effects: int, report_path: str | None) -> None:
+                   effects: int, report_path: str | None,
+                   summary: str | None = None) -> None:
         self._conn.execute(
             "UPDATE runs SET finished_at=?, status=?, passed=?, failed=?, "
-            "effects=?, report_path=? WHERE id=?",
-            (time.time(), status, passed, failed, effects, report_path, run_id),
+            "effects=?, report_path=?, summary=? WHERE id=?",
+            (time.time(), status, passed, failed, effects, report_path, summary, run_id),
         )
         self._conn.commit()
 
@@ -135,3 +143,11 @@ class Store:
             "SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def previous_run(self, scenario: str, before_id: int) -> dict | None:
+        """Latest finished run of the same scenario before the given run id."""
+        row = self._conn.execute(
+            "SELECT * FROM runs WHERE scenario=? AND id<? AND finished_at IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1", (scenario, before_id),
+        ).fetchone()
+        return dict(row) if row else None

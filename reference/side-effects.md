@@ -16,6 +16,24 @@ Every run attaches collectors to the whole browser context (including popups):
 Each effect stores the step index it happened during, so the report ties "500 on
 /api/orders" to "step 4: 주문 버튼 클릭".
 
+## Dedupe and noise rules
+
+- Identical effects (same type + message) within a run are ONE row with a count
+  ("횟수" column). A warning spammed 20 times reads as one line, not twenty.
+- Known noise is declared once and split out of the headline count, two ways:
+  - per scenario: `policy.ignore_effects: ["substring", ...]`
+  - per site (applies to every scenario + auto QA of that site):
+    `~/.superqa/sites/<site>/ignore.yaml` - a plain YAML list of substrings.
+  Ignored effects still appear in the report under "무시된 부작용" - nothing is
+  deleted, only demoted. Never put a bug candidate in an ignore list.
+
+## Run-to-run comparison (automatic)
+
+Every run stores a summary; the next run of the same scenario prints and embeds a
+diff: new failures, resolved failures, newly appeared / disappeared side-effect
+types (messages are digit-normalized so changing ids do not churn). "지난 실행과
+동일합니다 - 회귀 없음" is the clean verdict a developer wants after shipping.
+
 ## Triage rules (agent duty, in the user's report summary)
 
 1. **Bug candidate** - page_error, request_failed, http_error 5xx, console_error that

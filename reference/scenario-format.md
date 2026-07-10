@@ -14,6 +14,9 @@ policy:
   popups: follow             # follow (switch to new tab) | ignore | fail
   fail_on_console_error: false
   fail_on_http_error: false
+  ignore_effects:            # noise substrings -> effects still recorded, but
+    - "[Analytics]"          # split into the report's "ignored" section
+
 steps:
   - action: goto
     url: "{{entry_url}}"     # any value can come from the var store
@@ -57,7 +60,9 @@ steps:
 | login | - | macro: fills username/password vars into common login forms |
 
 Common fields: `description` (user language, required in practice), `timeout_ms`
-(default 10000), `optional: true` (failure recorded but does not fail the run).
+(default 10000), `optional: true` (failure recorded but does not fail the run),
+`retry: N` (re-attempt a flaky step up to N extra times, 1s apart - e.g. viewers
+that swallow the first click while still initializing).
 
 ## Selectors
 

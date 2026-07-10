@@ -24,7 +24,11 @@ Two ways to use it:
   a floating SuperQA panel captures each step with a human-readable description.
 - Side effects are first-class: every run watches the whole browser context - including
   popups - so a 500 on an API, an uncaught exception, or an unexpected new tab shows up
-  even when every asserted step passed.
+  even when every asserted step passed. Duplicates are counted, known noise is split
+  out via per-site ignore rules.
+- Every run auto-compares against the previous run of the same scenario: new failures
+  and newly appeared side-effect types are flagged as regressions; identical runs get
+  a clean "no regression" verdict.
 
 ## Install
 

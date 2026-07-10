@@ -34,7 +34,7 @@
 
 <section>
   <h2>오류 유발</h2>
-  <button id="consoleerr-btn" onclick="console.error('의도된 콘솔 오류')">콘솔 오류</button>
+  <button id="consoleerr-btn" onclick="for(var i=0;i<3;i++)console.error('의도된 콘솔 오류')">콘솔 오류</button>
   <button id="jserr-btn" onclick="setTimeout(()=>{throw new Error('의도된 JS 예외')},10)">JS 예외</button>
   <button id="fetch404-btn" onclick="var i=new Image();i.src='missing-'+Date.now()+'.png'">깨진 요청</button>
 </section>

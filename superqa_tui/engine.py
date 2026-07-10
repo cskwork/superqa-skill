@@ -22,7 +22,7 @@ from playwright.async_api import (
     async_playwright,
 )
 
-from .scenario import Policy, Scenario, Step, superqa_home
+from .scenario import Policy, Scenario, Step, site_ignore_patterns, superqa_home
 from .store import Store
 
 EventCb = Callable[[dict], None]
@@ -38,12 +38,20 @@ class SideEffect:
     message: str
     step_index: int | None = None
     at: float = field(default_factory=time.time)
+    count: int = 1     # identical effects are deduped and counted
+    ignored: bool = False  # matched a noise pattern (site/scenario ignore rules)
 
     def to_dict(self) -> dict:
         return {
-            "type": self.type, "severity": self.severity,
-            "message": self.message, "step_index": self.step_index, "at": self.at,
+            "type": self.type, "severity": self.severity, "message": self.message,
+            "step_index": self.step_index, "at": self.at,
+            "count": self.count, "ignored": self.ignored,
         }
+
+    def digest(self) -> str:
+        """Stable key for run-to-run comparison: digits collapsed, prefix only."""
+        norm = re.sub(r"\d+", "#", self.message[:100])
+        return f"{self.type}:{norm}"
 
 
 @dataclass
@@ -74,6 +82,22 @@ class RunResult:
     def failed(self) -> int:
         return sum(1 for r in self.step_results if r.status == "fail")
 
+    @property
+    def visible_effects(self) -> list[SideEffect]:
+        return [e for e in self.effects if not e.ignored]
+
+    def summary_dict(self) -> dict:
+        """Compact run fingerprint persisted per run and diffed against the next one."""
+        return {
+            "status": self.status,
+            "passed": self.passed,
+            "failed": self.failed,
+            "failed_steps": [
+                (r.step.description or r.step.action)
+                for r in self.step_results if r.status == "fail"],
+            "effect_digests": sorted({e.digest() for e in self.visible_effects}),
+        }
+
 
 def _mask(text: str, secrets: list[str]) -> str:
     for s in secrets:
@@ -85,18 +109,28 @@ def _mask(text: str, secrets: list[str]) -> str:
 class EffectCollector:
     """Attach listeners to a context; every page (incl. popups) is covered."""
 
-    def __init__(self, policy: Policy, on_event: EventCb | None = None):
+    def __init__(self, policy: Policy, on_event: EventCb | None = None,
+                 ignore_patterns: list[str] | None = None):
         self.policy = policy
         self.effects: list[SideEffect] = []
         self.current_step: int | None = None
         self.on_event = on_event
         self.new_pages: list[Page] = []
         self._seen_http: set[str] = set()
+        self._by_key: dict[tuple[str, str], SideEffect] = {}
+        self.ignore_patterns = list(ignore_patterns or [])
 
     def _add(self, type_: str, severity: str, message: str) -> None:
-        eff = SideEffect(type_, severity, message[:500], self.current_step)
+        message = message[:500]
+        key = (type_, message)
+        if key in self._by_key:               # dedupe: same effect again -> count up
+            self._by_key[key].count += 1
+            return
+        ignored = any(pat and pat in message for pat in self.ignore_patterns)
+        eff = SideEffect(type_, severity, message, self.current_step, ignored=ignored)
+        self._by_key[key] = eff
         self.effects.append(eff)
-        if self.on_event:
+        if self.on_event and not ignored:
             self.on_event({"kind": "effect", **eff.to_dict()})
 
     def attach_context(self, context: BrowserContext) -> None:
@@ -204,10 +238,11 @@ class Engine:
         run_dir.mkdir(parents=True, exist_ok=True)
         result.run_dir = run_dir
 
+        ignore = sc.policy.ignore_effects + site_ignore_patterns(sc.site)
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(headless=not self.headed, slow_mo=self.slow_mo)
             context = await browser.new_context(viewport={"width": 1440, "height": 900})
-            collector = EffectCollector(sc.policy, self.on_event)
+            collector = EffectCollector(sc.policy, self.on_event, ignore)
             collector.attach_context(context)
             page = await context.new_page()
             try:
@@ -229,7 +264,15 @@ class Engine:
             t0 = time.monotonic()
             sr = StepResult(index=i, step=step, status="pass")
             try:
-                active = await self._exec_step(sc, step, active, context)
+                for attempt in range(step.retry + 1):
+                    try:
+                        active = await self._exec_step(sc, step, active, context)
+                        break
+                    except Exception:
+                        if attempt >= step.retry:
+                            raise
+                        self._emit("step_retry", index=i, attempt=attempt + 1)
+                        await asyncio.sleep(1.0)
                 await self._shot(active, run_dir, i, sr)
             except Exception as e:
                 sr.status = "skipped" if step.optional else "fail"
@@ -388,10 +431,11 @@ class Engine:
         run_dir.mkdir(parents=True, exist_ok=True)
         result.run_dir = run_dir
 
+        ignore = site_ignore_patterns(site)
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(headless=not self.headed, slow_mo=self.slow_mo)
             context = await browser.new_context(viewport={"width": 1440, "height": 900})
-            collector = EffectCollector(sc.policy, self.on_event)
+            collector = EffectCollector(sc.policy, self.on_event, ignore)
             collector.attach_context(context)
             page = await context.new_page()
             try:
@@ -491,12 +535,28 @@ class Engine:
                 driver_task.cancel()
             await browser.close()
 
+        self._map_recorded_vars(site, steps)
         sc = Scenario(name=name or f"기록-{time.strftime('%m%d-%H%M')}", site=site,
                       base_url=url, language=language, steps=steps)
         sc.save()
         self._emit("record_done", path=str(sc.path), steps=len(steps),
                    run_requested=bool(run_cb.get("requested")))
         return sc
+
+    def _map_recorded_vars(self, site: str, steps: list[Step]) -> None:
+        """Typed values that equal a stored var become {{key}} references.
+
+        Keeps recorded scenarios portable and keeps personal values (ids, emails)
+        out of YAML files. Passwords are already masked at capture time.
+        """
+        value_to_key = {
+            r["value"]: r["key"]
+            for r in self.store.list_vars(site)
+            if r["value"] and len(r["value"]) >= 3
+        }
+        for step in steps:
+            if step.action == "fill" and step.value in value_to_key:
+                step.value = "{{" + value_to_key[step.value] + "}}"
 
 
 def _maybe_done(context: BrowserContext, done: asyncio.Event) -> None:

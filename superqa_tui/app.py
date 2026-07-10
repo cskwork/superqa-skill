@@ -27,10 +27,13 @@ from textual.widgets import (
     Static,
 )
 
+import json
+
+from .diff import compute_diff, format_diff_lines
 from .engine import Engine
 from .i18n import t
-from .report import write_reports
-from .scenario import Scenario, list_scenarios
+from .report import write_index, write_reports
+from .scenario import Scenario, broken_scenarios, list_scenarios
 from .scheduler import add_schedule, load_schedules, run_loop
 from .store import Store
 
@@ -127,6 +130,8 @@ class SuperQAApp(App):
         table.clear()
         for sc in self.scenarios:
             table.add_row(sc.site, sc.name, str(len(sc.steps)), ",".join(sc.tags))
+        for path, err in broken_scenarios():
+            self.log_line(f"[yellow]경고: 읽을 수 없는 시나리오 {path.name} - {err}[/yellow]")
         sched = {e.scenario for e in load_schedules() if e.enabled}
         hint = self.query_one("#hint", Static)
         hint.update(f"스케줄 활성: {len(sched)}건" if sched else "")
@@ -175,16 +180,25 @@ class SuperQAApp(App):
         self.log_line(f"[bold]{t('run')}: {sc.name}[/bold] ({sc.site})")
         engine = Engine(store=self.store, headed=headed, on_event=self._engine_event)
         result = await engine.run_scenario(sc)
-        _, html_p = write_reports(result, self.store)
+        summary = result.summary_dict()
+        prev = self.store.previous_run(sc.name, run_id)
+        diff_lines = format_diff_lines(
+            compute_diff(prev.get("summary") if prev else None, summary))
+        _, html_p = write_reports(result, self.store, diff_lines)
         self.store.finish_run(run_id, result.status, result.passed, result.failed,
-                              len(result.effects), str(html_p))
+                              len(result.visible_effects), str(html_p),
+                              json.dumps(summary, ensure_ascii=False))
+        write_index(self.store)
         color = "green" if result.status == "pass" else "red"
         word = t("status_pass") if result.status == "pass" else t("status_fail")
         self.log_line(
             f"[{color} bold]{word}[/{color} bold] - "
             + t("summary_line", total=len(result.step_results),
                 passed=result.passed, failed=result.failed)
-            + " / " + t("effects_line", count=len(result.effects)))
+            + " / " + t("effects_line", count=len(result.visible_effects)))
+        self.log_line(f"[cyan]{t('diff_title')}[/cyan]")
+        for ln in diff_lines:
+            self.log_line(f"  {ln}")
         self.log_line(f"리포트: {html_p}")
         self.refresh_runs()
 
@@ -231,13 +245,21 @@ class SuperQAApp(App):
         if not answers or not answers.get("url", "").startswith("http"):
             return
         site = answers.get("site") or "default"
-        run_id = self.store.start_run(f"auto:{answers['url']}", site)
+        from urllib.parse import urlparse
+        run_name = f"자동QA-{urlparse(answers['url']).netloc or 'local'}"
+        run_id = self.store.start_run(run_name, site)
         self.log_line(f"[bold]{t('auto')}: {answers['url']}[/bold]")
         engine = Engine(store=self.store, headed=True, on_event=self._engine_event)
         result = await engine.auto_smoke(answers["url"], site=site)
-        _, html_p = write_reports(result, self.store)
+        summary = result.summary_dict()
+        prev = self.store.previous_run(run_name, run_id)
+        diff_lines = format_diff_lines(
+            compute_diff(prev.get("summary") if prev else None, summary))
+        _, html_p = write_reports(result, self.store, diff_lines)
         self.store.finish_run(run_id, result.status, result.passed, result.failed,
-                              len(result.effects), str(html_p))
+                              len(result.visible_effects), str(html_p),
+                              json.dumps(summary, ensure_ascii=False))
+        write_index(self.store)
         self.log_line(f"리포트: {html_p}")
         self.refresh_runs()
 

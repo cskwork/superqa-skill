@@ -33,8 +33,10 @@ user's language. Never claim a check passed without a run directory + report to 
 4. **Report in the user's language.** Scenario `language:` drives report labels; your
    summary to the user follows the conversation language (`reference/report.md`).
 5. **Side effects are findings, not noise.** Console errors, JS exceptions, failed
-   requests, HTTP 4xx/5xx, unexpected dialogs/popups/tabs are collected on every run.
-   Triage each one: bug, known behavior, or environment issue (`reference/side-effects.md`).
+   requests, HTTP 4xx/5xx, unexpected dialogs/popups/tabs are collected on every run,
+   deduped with counts, and diffed against the previous run (new types = regression
+   signal). Declare known noise in `~/.superqa/sites/<site>/ignore.yaml` instead of
+   ignoring findings by hand (`reference/side-effects.md`).
 6. **Popups and dialogs never block a run.** Engine policy auto-accepts dialogs and
    follows new tabs by default; scenario `policy:` overrides (`reference/scenario-format.md`).
 

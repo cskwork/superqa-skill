@@ -65,8 +65,10 @@ When a developer says a backend/frontend feature is done:
 2. Run them all (`run --all --site <site> --headless`). This is the baseline sweep.
 3. If the feature added new behavior, explore only the changed screens (step 2) and add
    new scenario cases for them, then run again.
-4. Compare against the previous run (`~/.superqa/reports/`, or `superqa report`):
-   newly failing steps and NEW side-effect types are regressions - report them first.
+4. Read the automatic diff each run prints ("지난 실행과 비교"): new failures and
+   newly appeared side-effect types are regressions - report them first.
+   `superqa report list` shows the full history (also written to
+   `~/.superqa/reports/index.html`).
 
 ## 6. Report back
 

@@ -1,6 +1,6 @@
 [project]
 name = "superqa"
-version = "0.1.0"
+version = "0.2.0"
 description = "Browser QA for everyone: record by clicking, run, schedule, and get reports non-developers can read - in your language."
 readme = "README.md"
 license = { text = "MIT" }

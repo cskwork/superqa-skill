@@ -53,5 +53,11 @@ superqa run --all --site myshop --headless
 superqa auto https://myshop.example.com --site myshop
 superqa vars set myshop username myid
 superqa vars set myshop password s3cret        # auto-masked
-superqa report open
+superqa report open                            # latest report
+superqa report list                            # run history (+ reports/index.html)
 ```
+
+Every run automatically compares against the previous run of the same scenario
+("지난 실행과 비교" in output and report): new failures and new side-effect types
+are flagged, identical runs get "회귀 없음". Known noise can be silenced per site
+via `~/.superqa/sites/<site>/ignore.yaml` (see reference/side-effects.md).

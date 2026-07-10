@@ -13,12 +13,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import subprocess
 import sys
+from urllib.parse import urlparse
 
+from .diff import compute_diff, format_diff_lines
 from .engine import Engine, RunResult
 from .i18n import t
-from .report import write_reports
+from .report import write_index, write_reports
 from .scenario import broken_scenarios, find_scenario, list_scenarios
 from .scheduler import add_schedule, load_schedules, remove_schedule, run_loop
 from .store import Store
@@ -41,15 +44,27 @@ def _print_event(ev: dict) -> None:
 
 
 def _finish(result: RunResult, store: Store, run_id: int) -> int:
-    _md, html_p = write_reports(result, store)
-    store.finish_run(run_id, result.status, result.passed, result.failed,
-                     len(result.effects), str(html_p))
     lang = result.scenario.language
+    summary = result.summary_dict()
+    prev = store.previous_run(result.scenario.name, run_id)
+    diff = compute_diff(prev.get("summary") if prev else None, summary)
+    diff_lines = format_diff_lines(diff, lang)
+    _md, html_p = write_reports(result, store, diff_lines)
+    store.finish_run(run_id, result.status, result.passed, result.failed,
+                     len(result.visible_effects), str(html_p),
+                     json.dumps(summary, ensure_ascii=False))
+    write_index(store, lang)
     word = t("status_pass", lang) if result.status == "pass" else t("status_fail", lang)
+    ignored_n = len(result.effects) - len(result.visible_effects)
+    noise = f" (노이즈 {ignored_n}건 분리)" if ignored_n and lang == "ko" else (
+        f" ({ignored_n} noise entries filtered)" if ignored_n else "")
     print(f"\n{t('result', lang)}: {word} | "
           + t("summary_line", lang, total=len(result.step_results),
               passed=result.passed, failed=result.failed)
-          + " | " + t("effects_line", lang, count=len(result.effects)))
+          + " | " + t("effects_line", lang, count=len(result.visible_effects)) + noise)
+    print(f"{t('diff_title', lang)}:")
+    for ln in diff_lines:
+        print(f"  {ln}")
     print(f"리포트: {html_p}")
     return 0 if result.status == "pass" else 1
 
@@ -66,6 +81,8 @@ async def _run_one(name: str, headed: bool, store: Store) -> int:
 def cmd_run(args) -> int:
     store = Store()
     headed = not args.headless
+    for path, err in broken_scenarios():
+        print(f"[경고] 읽을 수 없는 시나리오(건너뜀): {path} - {err}")
     if args.all:
         scs = [s for s in list_scenarios() if not args.site or s.site == args.site]
         if not scs:
@@ -84,7 +101,9 @@ def cmd_run(args) -> int:
 def cmd_auto(args) -> int:
     store = Store()
     engine = Engine(store=store, headed=not args.headless, on_event=_print_event)
-    run_id = store.start_run(f"auto:{args.url}", args.site)
+    # same name the engine gives the scenario, so run-to-run diff links up
+    run_name = f"자동QA-{urlparse(args.url).netloc or 'local'}"
+    run_id = store.start_run(run_name, args.site)
     result = asyncio.run(engine.auto_smoke(args.url, site=args.site,
                                            max_links=args.max_links, language=args.lang))
     return _finish(result, store, run_id)
@@ -149,6 +168,15 @@ def cmd_schedule(args) -> int:
 
 def cmd_report(args) -> int:
     store = Store()
+    if args.report_cmd == "list":
+        idx = write_index(store)
+        for r in store.recent_runs(15):
+            import time as _t
+            when = _t.strftime("%m-%d %H:%M", _t.localtime(r["started_at"]))
+            print(f"  {when}  {r['status']:8s} {r['scenario']:28s} "
+                  f"{r['passed']}/{r['passed'] + r['failed']}  부작용 {r['effects']}")
+        print(f"이력 인덱스: {idx}")
+        return 0
     runs = store.recent_runs(1)
     if not runs or not runs[0].get("report_path"):
         print("리포트가 없습니다.")
@@ -217,8 +245,8 @@ def build_parser() -> argparse.ArgumentParser:
     ssub.add_parser("list"); ssub.add_parser("daemon")
     s.set_defaults(func=cmd_schedule, sched_cmd="list")
 
-    rep = sub.add_parser("report", help="최근 리포트")
-    rep.add_argument("report_cmd", nargs="?", choices=["open"], default=None)
+    rep = sub.add_parser("report", help="최근 리포트 / 이력")
+    rep.add_argument("report_cmd", nargs="?", choices=["open", "list"], default=None)
     rep.set_defaults(func=cmd_report)
 
     ls = sub.add_parser("list", help="시나리오 목록")
