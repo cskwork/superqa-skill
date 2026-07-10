@@ -1,0 +1,130 @@
+"""UI / report strings. Korean default; English fallback.
+
+Report language follows the scenario's `language` field; TUI language follows
+the SUPERQA_LANG env var or the stored setting.
+"""
+from __future__ import annotations
+
+import os
+
+STRINGS: dict[str, dict[str, str]] = {
+    "ko": {
+        "app_title": "SuperQA - 누구나 쓰는 브라우저 QA",
+        "scenarios": "시나리오",
+        "run_log": "실행 로그",
+        "recent_runs": "최근 실행",
+        "no_scenarios": "시나리오가 없습니다. n 키로 브라우저 기록을 시작하세요.",
+        "run": "실행",
+        "run_all": "전체 실행",
+        "record": "새 기록",
+        "auto": "자동 QA",
+        "schedule": "스케줄",
+        "vars": "계정/변수",
+        "open_report": "리포트 열기",
+        "quit": "종료",
+        "status_pass": "성공",
+        "status_fail": "실패",
+        "status_running": "실행 중",
+        "step": "단계",
+        "side_effects": "부작용(사이드이펙트)",
+        "no_side_effects": "감지된 부작용 없음",
+        "report_title": "QA 리포트",
+        "scenario_name": "시나리오",
+        "site": "사이트",
+        "started": "시작 시각",
+        "duration": "소요 시간",
+        "result": "결과",
+        "steps_summary": "단계별 결과",
+        "screenshot": "스크린샷",
+        "effect_console_error": "콘솔 오류",
+        "effect_console_warning": "콘솔 경고",
+        "effect_page_error": "페이지 오류(JS 예외)",
+        "effect_request_failed": "네트워크 요청 실패",
+        "effect_http_error": "HTTP 오류 응답",
+        "effect_dialog": "다이얼로그(알림창)",
+        "effect_popup": "새 탭/팝업",
+        "effect_download": "다운로드",
+        "effect_navigation": "예상 밖 페이지 이동",
+        "severity_error": "오류",
+        "severity_warning": "경고",
+        "severity_info": "정보",
+        "summary_line": "총 {total}단계 중 {passed}단계 성공, {failed}단계 실패",
+        "effects_line": "부작용 {count}건 감지",
+        "record_hint": "브라우저에서 클릭하며 시나리오를 기록하세요. 우측 하단 SuperQA 패널에서 저장을 누르면 끝납니다.",
+        "enter_url": "QA할 사이트 주소(URL)를 입력하세요",
+        "enter_name": "시나리오 이름을 입력하세요",
+        "enter_site": "사이트 이름(예: myshop, blog)을 입력하세요",
+        "enter_interval": "실행 간격(분)을 입력하세요",
+        "saved": "저장됨",
+        "var_hint": "형식: 사이트 키 값  (예: myshop username myid) - 비밀번호류는 자동 마스킹",
+        "schedule_armed": "스케줄 활성화: {name} - {minutes}분마다",
+        "schedule_hint": "TUI가 켜져 있는 동안 스케줄이 실행됩니다. 백그라운드 자동화는 'superqa schedule daemon'을 사용하세요.",
+    },
+    "en": {
+        "app_title": "SuperQA - browser QA for everyone",
+        "scenarios": "Scenarios",
+        "run_log": "Run log",
+        "recent_runs": "Recent runs",
+        "no_scenarios": "No scenarios yet. Press n to record one in the browser.",
+        "run": "Run",
+        "run_all": "Run all",
+        "record": "Record",
+        "auto": "Auto QA",
+        "schedule": "Schedule",
+        "vars": "Accounts/Vars",
+        "open_report": "Open report",
+        "quit": "Quit",
+        "status_pass": "PASS",
+        "status_fail": "FAIL",
+        "status_running": "RUNNING",
+        "step": "Step",
+        "side_effects": "Side effects",
+        "no_side_effects": "No side effects detected",
+        "report_title": "QA Report",
+        "scenario_name": "Scenario",
+        "site": "Site",
+        "started": "Started",
+        "duration": "Duration",
+        "result": "Result",
+        "steps_summary": "Steps",
+        "screenshot": "Screenshot",
+        "effect_console_error": "Console error",
+        "effect_console_warning": "Console warning",
+        "effect_page_error": "Page error (JS exception)",
+        "effect_request_failed": "Network request failed",
+        "effect_http_error": "HTTP error response",
+        "effect_dialog": "Dialog",
+        "effect_popup": "New tab/popup",
+        "effect_download": "Download",
+        "effect_navigation": "Unexpected navigation",
+        "severity_error": "error",
+        "severity_warning": "warning",
+        "severity_info": "info",
+        "summary_line": "{passed} of {total} steps passed, {failed} failed",
+        "effects_line": "{count} side effects detected",
+        "record_hint": "Click through the site in the browser. Press Save on the SuperQA panel (bottom-right) to finish.",
+        "enter_url": "Enter the site URL to QA",
+        "enter_name": "Enter a scenario name",
+        "enter_site": "Enter a site id (e.g. myshop, blog)",
+        "enter_interval": "Enter interval in minutes",
+        "saved": "Saved",
+        "var_hint": "Format: site key value  (e.g. myshop username myid) - password-like keys are masked",
+        "schedule_armed": "Schedule armed: {name} - every {minutes} min",
+        "schedule_hint": "Schedules run while the TUI is open. For background automation use 'superqa schedule daemon'.",
+    },
+}
+
+
+def default_lang() -> str:
+    lang = os.environ.get("SUPERQA_LANG", "")
+    if lang:
+        return lang if lang in STRINGS else "en"
+    loc = (os.environ.get("LANG") or "").lower()
+    return "ko" if loc.startswith("ko") else "ko"  # user base is Korean-first
+
+
+def t(key: str, lang: str | None = None, **fmt) -> str:
+    lang = lang or default_lang()
+    table = STRINGS.get(lang) or STRINGS["en"]
+    s = table.get(key) or STRINGS["en"].get(key) or key
+    return s.format(**fmt) if fmt else s

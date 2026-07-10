@@ -1,0 +1,57 @@
+# TUI + recorder + scheduler (the non-developer lane)
+
+## Launch
+
+```bash
+bash scripts/superqa.sh          # from the skill root
+# or, after `pip install -e .`:
+superqa
+```
+
+Left pane: scenario list. Right: live run log + recent results. Footer shows every key.
+
+| key | does |
+|---|---|
+| r | run selected scenario (watch the browser do it) |
+| a | run all scenarios (regression sweep) |
+| n | record a new scenario by clicking in a real browser |
+| u | auto QA - give a URL, get a smoke report (opens page, checks links, collects errors) |
+| s | schedule selected scenario every N minutes |
+| v | accounts/variables (stored in SQLite, passwords masked) |
+| o | open the latest HTML report |
+| q | quit |
+
+## Recording (browser click -> QA step)
+
+`n` asks for URL / site / name, then opens a real Chrome window with a floating
+SuperQA panel (bottom-right):
+
+- Click through the site normally - every click/input becomes a step, described in
+  Korean ("'로그인' 클릭", "'아이디'에 'myid' 입력").
+- Typed passwords are saved as `{{password}}`, never plain text. Set the real value
+  once under `v` (or `superqa vars set <site> password <value>`).
+- **검증 추가** then click an element = "assert this is visible" step.
+- **일시정지 / 기록 재개** to browse without recording.
+- **저장 후 종료** writes the YAML and closes the browser. New tabs opened while
+  recording keep recording - the panel follows.
+
+## Scheduling / automation
+
+- In the TUI: `s` on a scenario, enter minutes. Runs headless in the background while
+  the TUI stays open; results appear in the log and recent-runs pane.
+- Without the TUI: `superqa schedule add <scenario> --every 30` then
+  `superqa schedule daemon` (wrap with nohup/launchd/cron for always-on automation).
+- One-off automation from scripts/CI: `superqa run --all --site <site> --headless`;
+  exit code 0 = green.
+
+## CLI equivalents (same engine, no TUI)
+
+```bash
+superqa record <url> --site myshop --name 로그인-정상
+superqa run 로그인-정상
+superqa run --all --site myshop --headless
+superqa auto https://myshop.example.com --site myshop
+superqa vars set myshop username myid
+superqa vars set myshop password s3cret        # auto-masked
+superqa report open
+```

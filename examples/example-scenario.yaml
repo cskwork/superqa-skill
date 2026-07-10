@@ -1,0 +1,29 @@
+# SuperQA 시나리오 예제 - ~/.superqa/scenarios/<site>/ 아래에 두면 목록에 나타납니다.
+# 계정 값은 커밋 금지: superqa vars set myshop username myid 로 저장하고 {{username}}으로 참조.
+name: 로그인-정상
+site: myshop
+base_url: https://myshop.example.com
+language: ko
+tags: [smoke, login]
+policy:
+  dialogs: accept        # 알림창은 자동 확인
+  popups: follow         # 새 탭이 열리면 따라간다
+steps:
+  - action: goto
+    url: "{{entry_url}}"
+    description: 사이트 접속
+  - action: fill
+    selector: "#username"
+    value: "{{username}}"
+    description: 아이디 입력
+  - action: fill
+    selector: "input[type='password']"
+    value: "{{password}}"
+    description: 비밀번호 입력
+  - action: click
+    selector: { role: button, name: 로그인 }
+    description: 로그인 버튼 클릭
+  - action: expect_text
+    selector: "#welcome"
+    value: "{{username}}"
+    description: 환영 문구에 아이디가 표시되는지 확인

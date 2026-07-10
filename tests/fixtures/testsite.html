@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>SuperQA 테스트 사이트</title>
+<style>
+  body{font-family:sans-serif;max-width:720px;margin:40px auto;padding:0 16px}
+  button,a{margin:4px}
+  #welcome,#delayed{display:none;padding:8px;background:#e6ffe6}
+</style>
+</head>
+<body>
+<h1>SuperQA 픽스처</h1>
+
+<section>
+  <h2>로그인</h2>
+  <input id="username" name="username" type="text" placeholder="아이디">
+  <input id="password" name="password" type="password" placeholder="비밀번호">
+  <button id="login-btn" onclick="login()">로그인</button>
+  <div id="welcome">환영합니다, <span id="who"></span>님</div>
+</section>
+
+<section>
+  <h2>다이얼로그</h2>
+  <button id="alert-btn" onclick="alert('경고 팝업입니다')">알림 열기</button>
+  <button id="confirm-btn" onclick="confirm('진행할까요?')">확인 팝업</button>
+</section>
+
+<section>
+  <h2>새 탭 / 팝업</h2>
+  <a id="newtab-link" href="second.html" target="_blank">새 탭으로 열기</a>
+  <button id="popup-btn" onclick="window.open('second.html','popup','width=480,height=360')">팝업 열기</button>
+</section>
+
+<section>
+  <h2>오류 유발</h2>
+  <button id="consoleerr-btn" onclick="console.error('의도된 콘솔 오류')">콘솔 오류</button>
+  <button id="jserr-btn" onclick="setTimeout(()=>{throw new Error('의도된 JS 예외')},10)">JS 예외</button>
+  <button id="fetch404-btn" onclick="var i=new Image();i.src='missing-'+Date.now()+'.png'">깨진 요청</button>
+</section>
+
+<section>
+  <h2>지연 표시</h2>
+  <button id="delay-btn" onclick="setTimeout(()=>{document.getElementById('delayed').style.display='block'},1200)">1.2초 후 표시</button>
+  <div id="delayed">지연 로딩된 내용</div>
+</section>
+
+<script>
+function login(){
+  var u = document.getElementById('username').value;
+  var p = document.getElementById('password').value;
+  if (u && p) {
+    document.getElementById('who').textContent = u;
+    document.getElementById('welcome').style.display = 'block';
+  } else {
+    alert('아이디/비밀번호를 입력하세요');
+  }
+}
+</script>
+</body>
+</html>
