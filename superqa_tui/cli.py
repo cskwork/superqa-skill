@@ -19,7 +19,7 @@ import sys
 from .engine import Engine, RunResult
 from .i18n import t
 from .report import write_reports
-from .scenario import find_scenario, list_scenarios
+from .scenario import broken_scenarios, find_scenario, list_scenarios
 from .scheduler import add_schedule, load_schedules, remove_schedule, run_loop
 from .store import Store
 
@@ -165,9 +165,10 @@ def cmd_list(_args) -> int:
     scs = list_scenarios()
     if not scs:
         print(t("no_scenarios"))
-        return 0
     for s in scs:
         print(f"  {s.site:12s} {s.name:30s} {len(s.steps)}단계  {s.path}")
+    for path, err in broken_scenarios():
+        print(f"  [경고] 읽을 수 없는 시나리오: {path} - {err}")
     return 0
 
 

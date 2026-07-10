@@ -164,7 +164,19 @@ def list_scenarios(home: Path | None = None) -> list[Scenario]:
         try:
             out.append(load_scenario(p))
         except Exception:
-            continue  # broken files are listed nowhere; report via CLI validate
+            continue  # surfaced separately via broken_scenarios()
+    return out
+
+
+def broken_scenarios(home: Path | None = None) -> list[tuple[Path, str]]:
+    """Scenario files that fail to load - shown as warnings so they never vanish silently."""
+    root = (home or superqa_home()) / "scenarios"
+    out: list[tuple[Path, str]] = []
+    for p in sorted(root.rglob("*.yaml")):
+        try:
+            load_scenario(p)
+        except Exception as e:
+            out.append((p, str(e).splitlines()[0][:120]))
     return out
 
 
